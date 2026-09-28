@@ -70,6 +70,11 @@ class AppointmentCreate(BaseModel):
     customer_email: str | None = None
 
 
+class AppointmentLookupRequest(BaseModel):
+    reference_code: str = Field(min_length=1, max_length=24)
+    customer_phone: str = Field(min_length=3, max_length=40)
+
+
 class AppointmentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     reference: str
@@ -77,6 +82,7 @@ class AppointmentOut(BaseModel):
     ends_at: datetime
     status: str
     service_name: str
+    staff_name: str | None = None
     service_duration_minutes: int
     service_price: Decimal
 

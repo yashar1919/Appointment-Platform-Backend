@@ -29,6 +29,7 @@ class StaffService:
     def __init__(self, db: AsyncSession) -> None: self.repo = StaffRepository(db)
     async def list_active(self, tenant_id: UUID): return await self.repo.list_active(tenant_id)
     async def list_for_service(self, tenant_id: UUID, service_id: UUID): return await self.repo.list_for_service(tenant_id, service_id)
+    async def get_by_id(self, tenant_id: UUID, staff_id: UUID): return await self.repo.get_by_id(tenant_id, staff_id)
 
 
 class LocationService:
@@ -85,6 +86,8 @@ class CustomerService:
 
 class AppointmentService:
     def __init__(self, db: AsyncSession) -> None: self.db, self.appointments, self.customers, self.services, self.staff, self.locations, self.schedule = db, AppointmentRepository(db), CustomerRepository(db), ServiceRepository(db), StaffRepository(db), LocationRepository(db), SchedulingRepository(db)
+    async def lookup(self, tenant_id: UUID, reference: str, phone: str) -> Appointment | None:
+        return await self.appointments.get_by_reference_and_phone(tenant_id, reference, phone)
     async def book(self, tenant_id: UUID, service_id: UUID, staff_id: UUID, location_id: UUID, starts_at: datetime, customer_data: dict) -> Appointment:
         if starts_at.tzinfo is None: raise ConflictError("starts_at must include a timezone")
         starts_at = starts_at.astimezone(timezone.utc)

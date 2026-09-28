@@ -32,6 +32,8 @@ class StaffRepository:
     async def get_eligible(self, tenant_id: UUID, staff_id: UUID, service_id: UUID) -> Staff | None:
         query = select(Staff).join(StaffService, StaffService.staff_id == Staff.id).where(Staff.id == staff_id, Staff.tenant_id == tenant_id, StaffService.service_id == service_id, Staff.is_active.is_(True))
         return await self.db.scalar(query)
+    async def get_by_id(self, tenant_id: UUID, staff_id: UUID) -> Staff | None:
+        return await self.db.scalar(select(Staff).where(Staff.id == staff_id, Staff.tenant_id == tenant_id))
 
 
 class LocationRepository:
@@ -79,3 +81,6 @@ class AppointmentRepository:
         return appointment
     async def get_by_reference(self, tenant_id: UUID, reference: str) -> Appointment | None:
         return await self.db.scalar(select(Appointment).where(Appointment.tenant_id == tenant_id, Appointment.reference == reference))
+    async def get_by_reference_and_phone(self, tenant_id: UUID, reference: str, phone: str) -> Appointment | None:
+        query = select(Appointment).join(Customer, Customer.id == Appointment.customer_id).where(Appointment.tenant_id == tenant_id, Appointment.reference == reference, Customer.phone == phone)
+        return await self.db.scalar(query)

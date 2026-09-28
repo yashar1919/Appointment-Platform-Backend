@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException
 from app.core.errors import ConflictError, NotFoundError
 from app.application.events import Event, bus
 from app.domain.models import Appointment, AppointmentStatus, Customer
@@ -88,6 +89,19 @@ class AppointmentService:
     def __init__(self, db: AsyncSession) -> None: self.db, self.appointments, self.customers, self.services, self.staff, self.locations, self.schedule = db, AppointmentRepository(db), CustomerRepository(db), ServiceRepository(db), StaffRepository(db), LocationRepository(db), SchedulingRepository(db)
     async def lookup(self, tenant_id: UUID, reference: str, phone: str) -> Appointment | None:
         return await self.appointments.get_by_reference_and_phone(tenant_id, reference, phone)
+    async def cancel(self, tenant_id: UUID, tenant_timezone: str, reference: str, phone: str) -> Appointment | None:
+        appointment = await self.appointments.get_by_reference_and_phone(tenant_id, reference, phone)
+        if not appointment:
+            return None
+        if appointment.status == AppointmentStatus.CANCELLED:
+            return appointment
+        now = datetime.now(ZoneInfo(tenant_timezone))
+        if appointment.starts_at <= now + timedelta(hours=24):
+            raise HTTPException(status_code=400, detail="لغو نوبت تنها تا ۲۴ ساعت قبل از زمان مراجعه امکان‌پذیر است. لطفاً برای هماهنگی با شماره کلینیک تماس بگیرید.")
+        appointment.status = AppointmentStatus.CANCELLED
+        await self.db.commit()
+        await self.db.refresh(appointment)
+        return appointment
     async def book(self, tenant_id: UUID, service_id: UUID, staff_id: UUID, location_id: UUID, starts_at: datetime, customer_data: dict) -> Appointment:
         if starts_at.tzinfo is None: raise ConflictError("starts_at must include a timezone")
         starts_at = starts_at.astimezone(timezone.utc)

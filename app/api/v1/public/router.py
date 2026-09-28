@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
-from app.api.schemas import AppointmentCreate, AppointmentLookupRequest, AppointmentOut, AvailabilityOut, AvailabilityQuery, LocationOut, PublicStaffOut, ServiceOut, StaffOut
+from app.api.schemas import AppointmentCancelRequest, AppointmentCreate, AppointmentLookupRequest, AppointmentOut, AvailabilityOut, AvailabilityQuery, LocationOut, PublicStaffOut, ServiceOut, StaffOut
+from app.application.events import Event, bus
 from app.application.services.services import AppointmentService, LocationService, SchedulingService, ServiceService, StaffService, TenantService
 from app.infrastructure.database import get_db
 
@@ -73,3 +74,13 @@ async def lookup_appointment(tenant_slug: str, payload: AppointmentLookupRequest
     response = AppointmentOut.model_validate(appointment).model_dump()
     response["staff_name"] = staff_member.name if staff_member else None
     return response
+
+
+@router.post("/appointments/cancel", response_model=AppointmentOut)
+async def cancel_appointment(tenant_slug: str, payload: AppointmentCancelRequest, db: AsyncSession = Depends(get_db)):
+    current = await tenant(tenant_slug, db)
+    appointment = await AppointmentService(db).cancel(current.id, current.timezone, payload.reference_code, payload.customer_phone)
+    if not appointment:
+        return JSONResponse(status_code=404, content={"code": "NOT_FOUND", "message": "نوبتی با این مشخصات یافت نشد"})
+    await bus.publish(Event("appointment.cancelled", {"tenant_id": current.id, "appointment_id": appointment.id}))
+    return appointment

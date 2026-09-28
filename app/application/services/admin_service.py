@@ -1,16 +1,18 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 from uuid import UUID
+from zoneinfo import ZoneInfo
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.admin_schemas import ServiceCreate, ServiceUpdate, StaffCreate, StaffUpdate
 from app.core.errors import ConflictError, NotFoundError
 from app.domain.models import Appointment, AppointmentStatus, Service, Staff, StaffService
 from app.infrastructure.repositories.admin import AdminRepository
+from fastapi import HTTPException
 
 
 class AdminService:
-    def __init__(self, db: AsyncSession, tenant_id: UUID) -> None:
-        self.db, self.tenant_id, self.repo = db, tenant_id, AdminRepository(db)
+    def __init__(self, db: AsyncSession, tenant_id: UUID, tenant_timezone: str) -> None:
+        self.db, self.tenant_id, self.tenant_timezone, self.repo = db, tenant_id, tenant_timezone, AdminRepository(db)
 
     async def list_appointments(self, appointment_date: date | None, status: AppointmentStatus | None) -> list[Appointment]:
         return await self.repo.appointments(self.tenant_id, appointment_date, status)
@@ -21,6 +23,11 @@ class AdminService:
             raise NotFoundError("Appointment not found")
         if appointment.status == AppointmentStatus.CANCELLED:
             return appointment
+        now = datetime.now(ZoneInfo(self.tenant_timezone))
+        if appointment.starts_at <= now:
+            raise HTTPException(status_code=400, detail="امکان لغو نوبت‌های گذشته وجود ندارد.")
+        if appointment.starts_at <= now + timedelta(hours=24):
+            raise HTTPException(status_code=400, detail="لغو نوبت تنها تا ۲۴ ساعت قبل از زمان مراجعه امکان‌پذیر است. برای لغو فوری لطفاً تماس بگیرید.")
         appointment.status = AppointmentStatus.CANCELLED
         await self.db.commit()
         await self.db.refresh(appointment)

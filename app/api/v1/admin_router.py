@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/v1/admin/{tenant_slug}", tags=["admin"], depende
 
 async def service(tenant_slug: str, db: AsyncSession) -> AdminService:
     tenant = await TenantService(db).resolve(tenant_slug)
-    return AdminService(db, tenant.id)
+    return AdminService(db, tenant.id, tenant.timezone)
 
 
 @router.get("/appointments", response_model=list[AdminAppointmentOut])

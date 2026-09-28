@@ -3,14 +3,28 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.admin_auth import require_admin_key
-from app.api.admin_schemas import AdminAppointmentOut, AdminServiceOut, AdminStaffOut, ServiceCreate, ServiceUpdate, StaffCreate, StaffUpdate
+from app.api.admin_schemas import AdminAppointmentOut, AdminServiceOut, AdminStaffOut, ServiceCreate, ServiceUpdate, StaffCreate, StaffUpdate, TestSMSRequest
 from app.application.events import Event, bus
 from app.application.services.admin_service import AdminService
 from app.application.services.services import TenantService
 from app.domain.models import AppointmentStatus
 from app.infrastructure.database import get_db
+from app.infrastructure.database import AsyncSessionLocal
+from app.infrastructure.notifications import NotificationService
+from app.core.config import get_settings
 
 router = APIRouter(prefix="/api/v1/admin/{tenant_slug}", tags=["admin"], dependencies=[Depends(require_admin_key)])
+test_router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
+
+
+@test_router.post("/test-sms")
+async def test_sms(payload: TestSMSRequest):
+    # TODO: Add admin authentication before production
+    try:
+        rec_id = await NotificationService(AsyncSessionLocal, get_settings()).send_test_sms(payload.phone, payload.message)
+        return {"status": "sent", "rec_id": rec_id}
+    except Exception as exc:
+        return {"status": "failed", "error": str(exc)}
 
 
 async def service(tenant_slug: str, db: AsyncSession) -> AdminService:

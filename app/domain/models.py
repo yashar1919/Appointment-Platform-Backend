@@ -154,6 +154,7 @@ class Appointment(Base):
     service_name: Mapped[str] = mapped_column(String(160), nullable=False)
     service_duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     service_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    reminder_sent: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"), nullable=False)
     __table_args__ = (CheckConstraint("starts_at < ends_at", name="ck_appointment_times"), Index("ix_appointment_tenant_start", "tenant_id", "starts_at"), ExcludeConstraint((text("staff_id"), "="), (text("tstzrange(starts_at, ends_at, '[)')"), "&&"), where=text("status IN ('confirmed', 'pending')"), name="ex_appointment_staff_no_overlap", using="gist"))
 
 

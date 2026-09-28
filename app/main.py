@@ -4,13 +4,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.api.v1.public.router import router as public_router
-from app.api.v1.admin_router import router as admin_router
+from app.api.v1.admin_router import router as admin_router, test_router as admin_test_router
 from app.application.events import bus
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.infrastructure.database import AsyncSessionLocal, close_database
 from app.infrastructure.notifications import NotificationService, register_notification_handlers
-from app.infrastructure.scheduler import create_scheduler
 
 logging.basicConfig(level=logging.INFO)
 settings = get_settings()
@@ -20,17 +19,15 @@ settings = get_settings()
 async def lifespan(_: FastAPI):
     notification_service = NotificationService(AsyncSessionLocal, settings)
     register_notification_handlers(bus, notification_service)
-    scheduler = create_scheduler()
-    scheduler.start()
     yield
-    scheduler.shutdown(wait=False)
     await close_database()
 
 
 app = FastAPI(title=settings.app_name, version="1.0.0", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=[*settings.cors_origin_list, "https://appointment-two-beta.vercel.app"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.include_router(public_router)
 app.include_router(admin_router)
+app.include_router(admin_test_router)
 
 
 @app.exception_handler(AppError)

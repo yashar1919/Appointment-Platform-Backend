@@ -5,6 +5,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.domain.models import AppointmentStatus
 
 
+class TestSMSRequest(BaseModel):
+    phone: str
+    message: str = "این یک پیامک تست از سیستم رزرو نوبت است."
+
+
 class AdminAppointmentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID

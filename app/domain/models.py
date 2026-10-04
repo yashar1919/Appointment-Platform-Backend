@@ -10,9 +10,11 @@ from app.infrastructure.base import Base
 
 
 class AppointmentStatus(str, Enum):
+    PENDING = "pending"
     CONFIRMED = "confirmed"
     CANCELLED = "cancelled"
     COMPLETED = "completed"
+    NO_SHOW = "no_show"
 
 
 class Tenant(Base):

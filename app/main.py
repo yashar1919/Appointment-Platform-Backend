@@ -24,7 +24,18 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, version="1.0.0", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=[*settings.cors_origin_list, "https://appointment-two-beta.vercel.app"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        *settings.cors_origin_list,
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://appointment-two-beta.vercel.app"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 app.include_router(public_router)
 app.include_router(admin_router)
 app.include_router(admin_test_router)
